@@ -1,196 +1,179 @@
 package wallet
 
 import (
-	"errors"
+	"testing"
 )
 
-//ErrPhoneRegistered -- phone already registred
-var ErrPhoneRegistered = errors.New("phone already registred")
 
-//ErrAmountMustBePositive -- amount must be greater than zero
-var ErrAmountMustBePositive = errors.New("amount must be greater than zero")
+func TestService_FindAccountByID_success_user(t *testing.T){
+	var svc Service
+	svc.RegisterAccount("+992000000001")
 
-//ErrAccountNotFound -- account not found
-var ErrAccountNotFound = errors.New("account not found")
-
-//ErrNotEnoughtBalance -- account not found
-var ErrNotEnoughtBalance = errors.New("account not enought balance")
-
-//ErrPaymentNotFound -- account not found
-var ErrPaymentNotFound = errors.New("payment not found")
-
-//ErrFavoriteNotFound -- favorite not found
-var ErrFavoriteNotFound = errors.New("favorite not found")
-
-//Service model
-type Service struct {
-	nextAccountID int64
-	accounts      []*types.Account
-	payments      []*types.Payment
-	favorites     []*types.Favorite
-}
-
-//RegisterAccount meth
-func (s *Service) RegisterAccount(phone types.Phone) (*types.Account, error) {
-	for _, account := range s.accounts {
-		if account.Phone == phone {
-			return nil, ErrPhoneRegistered
-		}
-	}
-	s.nextAccountID++
-	account := &types.Account{
-		ID:      s.nextAccountID,
-		Phone:   phone,
-		Balance: 0,
-	}
-	s.accounts = append(s.accounts, account)
-
-	return account, nil
-}
-
-//Pay method
-func (s *Service) Pay(accountID int64, amount types.Money, category types.PaymentCategory) (*types.Payment, error) {
-
-	if amount <= 0 {
-		return nil, ErrAmountMustBePositive
-	}
-	var account *types.Account
-	for _, ac := range s.accounts {
-		if ac.ID == accountID {
-			account = ac
-			break
-		}
-	}
-	if account == nil {
-		return nil, ErrAccountNotFound
-	}
-	if account.Balance < amount {
-		return nil, ErrNotEnoughtBalance
-	}
-	account.Balance -= amount
-	paymentID := uuid.New().String()
-	payment := &types.Payment{
-		ID:        paymentID,
-		AccountID: accountID,
-		Amount:    amount,
-		Category:  category,
-		Status:    types.PaymentStatusInProgress,
-	}
-	s.payments = append(s.payments, payment)
-	return payment, nil
-}
-
-//FindAccountByID method
-func (s *Service) FindAccountByID(accountID int64) (*types.Account, error) {
-
-	for _, account := range s.accounts {
-		if account.ID == accountID {
-			return account, nil
-		}
-	}
-	return nil, ErrAccountNotFound
-}
-
-//Deposit method
-func (s *Service) Deposit(accountID int64, amount types.Money) error {
-	if amount < 0 {
-		return ErrAmountMustBePositive
-	}
-	account, err := s.FindAccountByID(accountID)
-	if err != nil {
-		return err
-	}
-	account.Balance += amount
-	return nil
-
-}
-
-//FindPaymentByID method
-func (s *Service) FindPaymentByID(paymentID string) (*types.Payment, error) {
-
-	for _, payment := range s.payments {
-		if payment.ID == paymentID {
-			return payment, nil
-		}
-	}
-	return nil, ErrPaymentNotFound
-}
-
-//Reject method
-func (s *Service) Reject(paymentID string) error {
-
-	var payment, err = s.FindPaymentByID(paymentID)
-
-	if err != nil {
-		return err
-	}
-
-	var account, er = s.FindAccountByID(payment.AccountID)
-
-	if er != nil {
-		return er
-	}
-
-	payment.Status = types.PaymentStatusFail
-	account.Balance += payment.Amount
-
-	return nil
-}
-
-//Repeat method
-func (s *Service) Repeat(paymentID string) (*types.Payment, error) {
-
-	payment, err := s.FindPaymentByID(paymentID)
-	if err != nil {
-		return nil, err
-	}
-	paymentNew, err := s.Pay(payment.AccountID, payment.Amount, payment.Category)
-	if err != nil {
-		return nil, err
-	}
-	return paymentNew, nil
-}
-
-//FavoritePayment method
-func (s *Service) FavoritePayment(paymentID string, name string) (*types.Favorite, error) {
-
-	payment, err := s.FindPaymentByID(paymentID)
-	if err != nil {
-		return nil, err
-	}
-
-	favoriteID := uuid.New().String()
-	favorite := &types.Favorite{
-		ID:        favoriteID,
-		AccountID: payment.AccountID,
-		Name:      name,
-		Amount:    payment.Amount,
-		Category:  payment.Category,
-	}
-
-	s.favorites = append(s.favorites, favorite)
-
-	return favorite, nil
-}
-
-//PayFromFavorite method
-func (s *Service) PayFromFavorite(favoriteID string) (*types.Payment, error) {
-
-	var favorite *types.Favorite
-	for _, v := range s.favorites {
-		if v.ID == favoriteID{
-			favorite = v
-			break
-		}
-	}
-	if favorite == nil{
-		return nil, ErrFavoriteNotFound
-	}
-
-	payment, err := s.Pay(favorite.AccountID, favorite.Amount, favorite.Category)
+	account, err := svc.FindAccountByID(1)
 
 	if err != nil{
-		return nil, err
+		t.Errorf("method returned not nil error, account => %v", account)
 	}
-	return payment, nil
+
+}
+
+func TestService_FindAccountByID_notFound_user(t *testing.T){
+	var svc Service
+	svc.RegisterAccount("+992000000001")
+
+	account, err := svc.FindAccountByID(2)
+
+	if err == nil{
+		t.Errorf("method returned nil error, account => %v", account)
+	}
+
+}
+
+func TestService_Reject_success_user(t *testing.T){
+	var svc Service
+	svc.RegisterAccount("+992000000001")
+	account, err := svc.FindAccountByID(1)
+
+	if err != nil{
+		t.Errorf("method RegisterAccount returned not nil error, error => %v", err)
+	}
+
+
+	err = svc.Deposit(account.ID, 100_00)
+	if err != nil{
+		t.Errorf("method Deposit returned not nil error, error => %v", err)
+	}
+
+
+
+	payment, err := svc.Pay(account.ID, 10_00,"Cafe")
+
+	if err != nil{
+		t.Errorf("method Pay returned not nil error, error => %v", err)
+	}
+
+	pay, err := svc.FindPaymentByID(payment.ID)
+
+	if err != nil{
+		t.Errorf("method FindPaymentByID returned not nil error, error => %v", err)
+	}
+
+	err = svc.Reject(pay.ID)
+
+	if err != nil{
+		t.Errorf("method Reject returned not nil error, error => %v", err)
+	}
+
+
+
+}
+
+func TestService_Reject_fail_user(t *testing.T){
+	var svc Service
+	svc.RegisterAccount("+992000000001")
+	account, err := svc.FindAccountByID(1)
+
+	if err != nil{
+		t.Errorf("method RegisterAccount returned not nil error, account => %v", account)
+	}
+
+	err = svc.Deposit(account.ID, 100_00)
+	if err != nil{
+		t.Errorf("method Deposit returned not nil error, error => %v", err)
+	}
+
+
+	payment, err := svc.Pay(account.ID, 10_00,"Cafe")
+
+	if err != nil{
+		t.Errorf("method Pay returned not nil error, account => %v", account)
+	}
+
+	pay, err := svc.FindPaymentByID(payment.ID)
+
+	if err != nil{
+		t.Errorf("method FindPaymentByID returned not nil error, payment => %v", payment)
+	}
+
+	err = svc.Reject(pay.ID+"uu")
+
+	if err == nil{
+		t.Errorf("method Reject returned not nil error, pay => %v", pay)
+	}
+
+
+
+}
+func TestService_Repeat_success_user(t *testing.T){
+	var svc Service
+	
+	account, err := svc.RegisterAccount("+992000000001")
+
+	if err != nil{
+		t.Errorf("method RegisterAccount returned not nil error, account => %v", account)
+	}
+
+	err = svc.Deposit(account.ID, 100_00)
+	if err != nil{
+		t.Errorf("method Deposit returned not nil error, error => %v", err)
+	}
+
+
+	payment, err := svc.Pay(account.ID, 10_00,"Cafe")
+
+	if err != nil{
+		t.Errorf("method Pay returned not nil error, account => %v", account)
+	}
+
+	pay, err := svc.FindPaymentByID(payment.ID)
+
+	if err != nil{
+		t.Errorf("method FindPaymentByID returned not nil error, payment => %v", payment)
+	}
+
+	paymentNew, err := svc.Repeat(pay.ID)
+
+	if err != nil{
+		t.Errorf("method Repat returned not nil error, paymentNew => %v", paymentNew)
+	}
+
+
+
+}
+func TestService_Favorite_success_user(t *testing.T){
+	var svc Service
+	
+	account, err := svc.RegisterAccount("+992000000001")
+
+	if err != nil{
+		t.Errorf("method RegisterAccount returned not nil error, account => %v", account)
+	}
+
+	err = svc.Deposit(account.ID, 100_00)
+	if err != nil{
+		t.Errorf("method Deposit returned not nil error, error => %v", err)
+	}
+
+
+	payment, err := svc.Pay(account.ID, 10_00,"Cafe")
+
+	if err != nil{
+		t.Errorf("method Pay returned not nil error, account => %v", account)
+	}
+
+
+
+	favorite, err := svc.FavoritePayment(payment.ID, "My Favorite")
+
+	if err != nil{
+		t.Errorf("method FavoritePayment returned not nil error, favorite => %v", favorite)
+	}
+
+	paymentFavorite, err := svc.PayFromFavorite(favorite.ID)
+	if err != nil{
+		t.Errorf("method PayFromFavorite returned not nil error, paymentFavorite => %v", paymentFavorite)
+	}
+
+
+
 }
