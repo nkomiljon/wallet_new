@@ -35,7 +35,7 @@ var ErrPaymentNotFound = errors.New("payment not found")
 var ErrFavoriteNotFound = errors.New("favorite not found")
 
 //ErrFileNoteFound -- 
-var ErrFileNotFound = errors.New("file not found")
+var ErrFileNotFound = errors.New("Нет такой файл")
 
 //Service model
 type Service struct {
@@ -251,8 +251,7 @@ func (s *Service) ImportFromFile(path string) error {
 		return ErrFileNotFound
 	}
 	defer func ()  {
-		if cerr := file.Close();
-		cerr != nil {
+		if cerr := file.Close(); cerr != nil {
 			log.Print(cerr)
 		}
 	}()
@@ -271,15 +270,16 @@ func (s *Service) ImportFromFile(path string) error {
 		content = append(content, buf[:read]...)
 	}
 	data := string(content)
+
 	accounts := strings.Split(string(data), "|")
-	accounts = accounts[:len(accounts) -1]
+	accounts = accounts[:len(accounts)-1]
 	for _, account := range accounts {
 		 vals := strings.Split(account, ";")
 		 ID, err := strconv.Atoi(vals[0])
 		 if err != nil {
 			 return err
 		 }
-	balance,  err := strconv.Atoi(vals[2])
+	balance, err := strconv.Atoi(vals[2])
 	if err != nil {
 		return err
 	}
