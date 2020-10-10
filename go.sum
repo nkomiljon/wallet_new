@@ -1,2 +1,4 @@
 github.com/google/uuid v1.1.2 h1:EVhdT+1Kseyi1/pUmXKaFxYsDNy9RQYkMWRH68J/W7Y=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/nkomiljon/wallet_new v0.0.0-20201004123235-a99983f5dfab h1:2zOIscjzi++3dIDC+rdkhbHmya0eRo9M1bZvBFWS9YY=
+github.com/nkomiljon/wallet_new v0.0.0-20201004123235-a99983f5dfab/go.mod h1:nDj15N/UQBxsrIoIJw9r6PUR6wQcIF3z/3yFAlZ2ZRE=

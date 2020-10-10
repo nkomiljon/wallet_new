@@ -1,8 +1,15 @@
 package wallet
 
 import (
-	"github.com/google/uuid"
+	"strconv"
+	"log"
+	"os"
+
+    
+
 	"github.com/nkomiljon/wallet_new/pkg/types"
+	"github.com/google/uuid"
+	
 	"errors"
     
 )
@@ -24,6 +31,9 @@ var ErrPaymentNotFound = errors.New("payment not found")
 
 //ErrFavoriteNotFound -- favorite not found
 var ErrFavoriteNotFound = errors.New("favorite not found")
+
+//ErrFileNoteFound -- 
+var ErrFileNotFound = errors.New("file not found")
 
 //Service model
 type Service struct {
@@ -196,4 +206,37 @@ func (s *Service) PayFromFavorite(favoriteID string) (*types.Payment, error) {
 		return nil, err
 	}
 	return payment, nil
+}
+
+
+//Export 
+func (s *Service) ExportToFile(path string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		log.Print(err)
+		return ErrFileNotFound
+	}
+	defer func ()  {
+		if cerr := file.Close(); cerr != nil {
+			log.Print(cerr)
+		}
+	}()
+	str  := ""
+
+	for _, acc := range s.accounts {
+		ID := strconv.Itoa(int(acc.ID)) + ";"
+		phone := string(acc.Phone) + ";"
+		balance := strconv.Itoa(int(acc.Balance))
+
+		str += ID
+		str += phone
+		str += balance + "|"
+	}
+
+	_, err = file.Write([]byte(str))
+	if err != nil {
+		log.Print(err)
+		return ErrFileNotFound
+	}
+	return nil
 }
